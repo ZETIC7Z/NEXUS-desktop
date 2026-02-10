@@ -51,7 +51,7 @@ window.addEventListener('message', async (event) => {
 
 // We don't need to expose anything via contextBridge if the site relies solely on window.postMessage
 // But just in case, we can log that we are ready.
-console.log('P-Stream Desktop Preload Loaded');
+console.log('NEXUS Desktop Preload Loaded');
 
 let lastThemeColor = null;
 

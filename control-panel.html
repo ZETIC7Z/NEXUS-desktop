@@ -4,13 +4,13 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>P-Stream Control Panel</title>
+    <title>NEXUS Control Panel</title>
     <link rel="stylesheet" href="control-panel.css" />
   </head>
   <body>
     <div class="control-panel">
       <div class="control-panel__header">
-        <h1 class="control-panel__title">P-Stream Control Panel</h1>
+        <h1 class="control-panel__title">NEXUS Control Panel</h1>
       </div>
       <div class="control-panel__content">
         <div class="control-panel__section">
@@ -19,8 +19,8 @@
               <h3 class="control-panel__setting-title">Discord Rich Presence</h3>
               <p class="control-panel__setting-description">Show what you're watching on Discord</p>
             </div>
-            <label class="toggle">
-              <input type="checkbox" id="discord-rpc-toggle" class="toggle__input" />
+            <label class="toggle" for="discord-rpc-toggle">
+              <input type="checkbox" id="discord-rpc-toggle" class="toggle__input" title="Toggle Discord RPC" />
               <span class="toggle__slider"></span>
             </label>
           </div>
@@ -32,7 +32,9 @@
               <p class="control-panel__setting-description" id="version-text">Loading...</p>
             </div>
             <div class="control-panel__button-group">
-              <button id="update-now-btn" class="control-panel__button control-panel__button--primary" hidden>Update now</button>
+              <button id="update-now-btn" class="control-panel__button control-panel__button--primary" hidden>
+                Update now
+              </button>
               <button id="check-updates-btn" class="control-panel__button">Check for Updates</button>
             </div>
           </div>
@@ -64,9 +66,13 @@
           <div class="control-panel__setting">
             <div class="control-panel__setting-info">
               <h3 class="control-panel__setting-title">Uninstall App</h3>
-              <p class="control-panel__setting-description">Remove the app and all associated data from your computer</p>
+              <p class="control-panel__setting-description">
+                Remove the app and all associated data from your computer
+              </p>
             </div>
-            <button id="uninstall-app-btn" class="control-panel__button control-panel__button--danger">Uninstall App</button>
+            <button id="uninstall-app-btn" class="control-panel__button control-panel__button--danger">
+              Uninstall App
+            </button>
           </div>
         </div>
       </div>

@@ -277,7 +277,7 @@ resetAppBtn.addEventListener('click', async () => {
 uninstallAppBtn.addEventListener('click', async () => {
   // Strong warning with multiple confirmations
   const firstConfirm = confirm(
-    '⚠️ WARNING: This will permanently delete the P-Stream app and ALL associated data from your computer.\n\n' +
+    '⚠️ WARNING: This will permanently delete the NEXUS app and ALL associated data from your computer.\n\n' +
       'This includes:\n' +
       '• All app settings\n' +
       '• All cookies and browsing data\n' +
@@ -292,7 +292,7 @@ uninstallAppBtn.addEventListener('click', async () => {
 
   // Second confirmation
   const secondConfirm = confirm(
-    'Final confirmation: Are you sure you want to uninstall P-Stream?\n\n' +
+    'Final confirmation: Are you sure you want to uninstall NEXUS?\n\n' +
       'The app will be removed from your computer and all data will be deleted.',
   );
 

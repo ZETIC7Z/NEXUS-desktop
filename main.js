@@ -3,7 +3,13 @@ const path = require('path');
 const { handlers, setupInterceptors } = require('./ipc-handlers');
 const { autoUpdater } = require('electron-updater');
 const SimpleStore = require('./storage');
-const discordRPC = require('./discord-rpc');
+let discordRPC;
+try {
+  discordRPC = require('./discord-rpc');
+} catch (e) {
+  console.warn('Discord RPC module not available:', e.message);
+  discordRPC = null;
+}
 const { checkAndAutoUpdate } = require('./auto-updater');
 
 // Settings store (will be initialized when app is ready)
@@ -16,6 +22,7 @@ let controlPanelWindow = null;
 let mainBrowserView = null;
 
 function createWindow() {
+  app.setName('NEXUS');
   const TITLE_BAR_HEIGHT = 40;
   // Allow platform override via environment variable for previewing different platforms
   const platform = process.env.PLATFORM_OVERRIDE || process.platform;
@@ -26,7 +33,7 @@ function createWindow() {
     width: 1300,
     height: 800,
     autoHideMenuBar: true,
-    icon: path.join(__dirname, 'logo.png'),
+    icon: path.join(__dirname, 'public/nexus-logo.png'),
     backgroundColor: '#1f2025',
     fullscreenable: true,
     webPreferences: {
@@ -34,7 +41,7 @@ function createWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload-titlebar.js'),
     },
-    title: 'P-Stream',
+    title: 'NEXUS',
   };
 
   if (isMac) {
@@ -54,7 +61,7 @@ function createWindow() {
   // Ensure menu bar is hidden (especially important for fullscreen)
   mainWindow.setMenuBarVisibility(false);
 
-  mainWindow.loadFile(path.join(__dirname, 'index.html'));
+  mainWindow.loadFile(path.join(__dirname, 'titlebar.html'));
 
   const view = new BrowserView({
     webPreferences: {
@@ -219,11 +226,18 @@ function createWindow() {
     }
   });
 
-  // Get the saved stream URL or use default
-  const streamUrl = store ? store.get('streamUrl', 'pstream.mov') : 'pstream.mov';
-  const fullUrl =
-    streamUrl.startsWith('http://') || streamUrl.startsWith('https://') ? streamUrl : `https://${streamUrl}/`;
+  // Load remote URL as requested
+  let fullUrl = 'https://www.zeticuz.online/';
   view.webContents.loadURL(fullUrl);
+
+  // Update fullUrl on navigation
+  view.webContents.on('did-navigate', (event, url) => {
+    fullUrl = url;
+  });
+
+  view.webContents.on('did-navigate-in-page', (event, url) => {
+    fullUrl = url;
+  });
 
   // Show error page when the main document fails to load (e.g. no connection, DNS)
   view.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
@@ -348,8 +362,8 @@ function createWindow() {
   const injectMediaWatcher = () => {
     const script = `
       (function() {
-        if (window.__pstreamMediaWatcherInjected) return;
-        window.__pstreamMediaWatcherInjected = true;
+        if (window.__nexusMediaWatcherInjected) return;
+        window.__nexusMediaWatcherInjected = true;
 
         let lastMetadata = null;
         let lastProgress = null;
@@ -423,7 +437,7 @@ function createWindow() {
               }, '*');
             }
           } catch (e) {
-            console.error('[P-Stream Media Watcher]', e);
+            console.error('[NEXUS Media Watcher]', e);
           }
         };
 
@@ -478,19 +492,19 @@ function createWindow() {
   view.webContents.on('page-title-updated', (event, title) => {
     event.preventDefault();
 
-    if (title === 'P-Stream') {
-      mainWindow.setTitle('P-Stream');
-      discordRPC.setCurrentActivityTitle(null);
-      discordRPC.setCurrentMediaMetadata(null);
-      discordRPC.setActivity(null);
+    if (title === 'NEXUS') {
+      mainWindow.setTitle('NEXUS');
+      // discordRPC.setCurrentActivityTitle(null);
+      // discordRPC.setCurrentMediaMetadata(null);
+      // discordRPC.setActivity(null);
     } else {
-      const cleanTitle = title.replace(' - P-Stream', '');
-      mainWindow.setTitle(`${cleanTitle} - P-Stream`);
-      discordRPC.setCurrentActivityTitle(cleanTitle);
-      // Only use title if we don't have media metadata
-      if (!discordRPC.getCurrentMediaMetadata()) {
-        discordRPC.setActivity(cleanTitle);
-      }
+      const cleanTitle = title.replace(' - NEXUS', '');
+      mainWindow.setTitle(`${cleanTitle} - NEXUS`);
+      // discordRPC.setCurrentActivityTitle(cleanTitle);
+      // // Only use title if we don't have media metadata
+      // if (!discordRPC.getCurrentMediaMetadata()) {
+      //   discordRPC.setActivity(cleanTitle);
+      // }
     }
 
     mainWindow.webContents.send('title-changed', mainWindow.getTitle());
@@ -542,7 +556,7 @@ function createControlPanelWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload-control-panel.js'),
     },
-    title: 'P-Stream Control Panel',
+    title: 'NEXUS Control Panel',
     show: false,
   });
 
@@ -570,8 +584,8 @@ if (app.isPackaged) {
     // But we can explicitly set it to ensure it works
     autoUpdater.setFeedURL({
       provider: 'github',
-      owner: 'p-stream',
-      repo: 'p-stream-desktop',
+      owner: 'ZETICUZ',
+      repo: 'NEXUS-desktop',
     });
     console.log('Auto-updater configured for GitHub releases');
   } catch (error) {
@@ -618,7 +632,7 @@ autoUpdater.on('update-available', (info) => {
           .showMessageBox(BrowserWindow.getFocusedWindow() || null, {
             type: 'info',
             title: 'Update Available',
-            message: `A new version (${info.version}) of P-Stream is available!`,
+            message: `A new version (${info.version}) of NEXUS is available!`,
             detail: 'Update now to download and install automatically, or open the releases page in your browser.',
             buttons: ['Update now', 'Open Releases Page', 'Later'],
             defaultId: 0,
@@ -631,7 +645,7 @@ autoUpdater.on('update-available', (info) => {
               await checkAndAutoUpdate();
             } else if (result.response === 1) {
               // Open Releases Page button
-              shell.openExternal('https://github.com/p-stream/p-stream-desktop/releases');
+              shell.openExternal('https://github.com/ZETICUZ/NEXUS-desktop/releases');
             }
           })
           .catch(console.error);
@@ -694,7 +708,7 @@ autoUpdater.on('update-downloaded', (info) => {
 
 app.whenReady().then(async () => {
   // Set the app name
-  app.setName('P-Stream');
+  app.setName('NEXUS');
 
   // Check for updates FIRST (before creating window)
   // If an update is being installed, the app will quit and this won't continue
@@ -713,7 +727,7 @@ app.whenReady().then(async () => {
   });
 
   // Initialize Discord RPC
-  discordRPC.initialize(store);
+  // discordRPC.initialize(store);
 
   // Register IPC handlers
   Object.entries(handlers).forEach(([channel, handler]) => {
@@ -722,7 +736,7 @@ app.whenReady().then(async () => {
     });
   });
 
-  // Setup Network Interceptors (and add X-P-Stream-Client header for the configured stream URL only)
+  // Setup Network Interceptors (and add X-NEXUS-Client header for the configured stream URL only)
   setupInterceptors(session.defaultSession, {
     getStreamHostname: () => {
       const streamUrl = store.get('streamUrl', 'pstream.mov');
@@ -863,7 +877,7 @@ app.whenReady().then(async () => {
   // IPC handler for opening releases page in external browser
   ipcMain.handle('openReleasesPage', () => {
     try {
-      shell.openExternal('https://github.com/p-stream/p-stream-desktop/releases');
+      shell.openExternal('https://github.com/ZETICUZ/NEXUS-desktop/releases');
       return { success: true };
     } catch (error) {
       console.error('Failed to open releases page:', error);
@@ -942,7 +956,7 @@ app.whenReady().then(async () => {
               message: 'To complete the uninstall:',
               detail:
                 '1. All app data has been cleared.\n' +
-                '2. Please drag P-Stream.app from your Applications folder to the Trash.\n' +
+                '2. Please drag NEXUS.app from your Applications folder to the Trash.\n' +
                 '3. Empty the Trash to complete the removal.',
               buttons: ['OK'],
             });
@@ -969,7 +983,7 @@ app.whenReady().then(async () => {
               message: 'To complete the uninstall:',
               detail:
                 '1. All app data has been cleared.\n' +
-                '2. Please drag P-Stream.app from your Applications folder to the Trash.\n' +
+                '2. Please drag NEXUS.app from your Applications folder to the Trash.\n' +
                 '3. Empty the Trash to complete the removal.',
               buttons: ['OK'],
             });
@@ -984,7 +998,7 @@ app.whenReady().then(async () => {
             message: 'To complete the uninstall:',
             detail:
               '1. All app data has been cleared.\n' +
-              '2. Please drag P-Stream.app from your Applications folder to the Trash.\n' +
+              '2. Please drag NEXUS.app from your Applications folder to the Trash.\n' +
               '3. Empty the Trash to complete the removal.',
             buttons: ['OK'],
           });
@@ -1000,7 +1014,7 @@ app.whenReady().then(async () => {
           detail:
             '1. All app data has been cleared.\n' +
             '2. Open Settings > Apps > Apps & features\n' +
-            '3. Find "P-Stream" and click Uninstall\n' +
+            '3. Find "NEXUS" and click Uninstall\n' +
             '4. Follow the uninstaller prompts',
           buttons: ['Open Settings', 'OK'],
           defaultId: 0,
@@ -1024,7 +1038,7 @@ app.whenReady().then(async () => {
           message: 'To complete the uninstall:',
           detail:
             '1. All app data has been cleared.\n' +
-            '2. Delete the P-Stream AppImage file from where you saved it.\n' +
+            '2. Delete the NEXUS AppImage file from where you saved it.\n' +
             '3. Remove any desktop entries or shortcuts you created.',
           buttons: ['OK'],
         });

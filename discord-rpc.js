@@ -1,4 +1,28 @@
-const DiscordRPC = require('discord-rpc');
+let DiscordRPC;
+try {
+  DiscordRPC = require('discord-rpc');
+} catch (e) {
+  // discord-rpc npm package not installed — export no-op stubs
+  const { ipcMain } = require('electron');
+
+  function noopInitialize(settingsStore) {
+    ipcMain.handle('get-discord-rpc-enabled', () => false);
+    ipcMain.handle('set-discord-rpc-enabled', async () => false);
+    ipcMain.handle('updateMediaMetadata', async () => ({ success: true }));
+  }
+
+  module.exports = {
+    initialize: noopInitialize,
+    setActivity: () => {},
+    getCurrentActivityTitle: () => null,
+    setCurrentActivityTitle: () => {},
+    getCurrentMediaMetadata: () => null,
+    setCurrentMediaMetadata: () => {},
+    updateActivity: () => {},
+  };
+  return;
+}
+
 const { ipcMain } = require('electron');
 
 const clientId = '1451640447993774232';
@@ -41,12 +65,12 @@ async function setActivity(title, mediaMetadata = null) {
 
   if (!mediaMetadata || !mediaMetadata.title) {
     const activity = {
-      details: title && title !== 'P-Stream' ? `Watching: ${title}` : 'P-Stream',
+      details: title && title !== 'NEXUS' ? `Watching: ${title}` : 'NEXUS',
       startTimestamp: new Date(),
       largeImageKey: 'logo',
-      largeImageText: 'P-Stream',
+      largeImageText: 'NEXUS',
       instance: false,
-      buttons: [{ label: 'Use P-Stream', url: getStreamUrlForRPC() }],
+      buttons: [{ label: 'Use NEXUS', url: getStreamUrlForRPC() }],
     };
     rpc.setActivity(activity).catch(console.error);
     return;
@@ -61,9 +85,9 @@ async function setActivity(title, mediaMetadata = null) {
     details: 'Watching: ' + (mediaMetadata.artist ? mediaMetadata.artist + ' ' : '') + mediaMetadata.title,
     startTimestamp: new Date(),
     largeImageKey: mediaMetadata.poster || 'logo',
-    largeImageText: mediaMetadata.artist || mediaMetadata.title || 'P-Stream',
+    largeImageText: mediaMetadata.artist || mediaMetadata.title || 'NEXUS',
     instance: false,
-    buttons: [{ label: 'Use P-Stream', url: getStreamUrlForRPC() }],
+    buttons: [{ label: 'Use NEXUS', url: getStreamUrlForRPC() }],
   };
 
   if (state) {

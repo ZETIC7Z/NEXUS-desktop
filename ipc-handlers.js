@@ -208,7 +208,7 @@ const handlers = {
 
 /**
  * @param {Electron.Session} sess
- * @param {{ getStreamHostname?: () => string | null }} [options] - If getStreamHostname is provided, requests to that hostname get X-P-Stream-Client: desktop
+ * @param {{ getStreamHostname?: () => string | null }} [options] - If getStreamHostname is provided, requests to that hostname get X-NEXUS-Client: desktop
  */
 function setupInterceptors(sess, options = {}) {
   const filter = { urls: ['<all_urls>'] };
@@ -224,7 +224,7 @@ function setupInterceptors(sess, options = {}) {
         if (streamHostname) {
           const requestHostname = new URL(details.url).hostname.replace(/^www\./, '');
           if (requestHostname === streamHostname.replace(/^www\./, '')) {
-            requestHeaders['X-P-Stream-Client'] = 'desktop';
+            requestHeaders['X-NEXUS-Client'] = 'desktop';
           }
         }
       } catch (_) {

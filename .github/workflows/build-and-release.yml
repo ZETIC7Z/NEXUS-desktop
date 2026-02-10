@@ -16,89 +16,39 @@ on:
         type: string
 
 jobs:
-  build-linux:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [x64, arm64]
-    env:
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: |
-          pnpm config set fund false
-          pnpm install --frozen-lockfile
-
-      - name: Build Linux ${{ matrix.arch }}
-        run: |
-          if [ "${{ matrix.arch }}" = "x64" ]; then
-            pnpm run build:linux --x64
-          else
-            pnpm run build:linux --${{ matrix.arch }}
-          fi
-
-      - name: Upload Linux artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: p-stream-linux-${{ matrix.arch }}
-          path: dist/*.AppImage
-          retention-days: 30
-
   build-windows:
     runs-on: windows-latest
     strategy:
       matrix:
-        arch: [x64, arm64]
+        arch: [x64]
     env:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      CSC_IDENTITY_AUTO_DISCOVERY: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
 
       - name: Install dependencies
-        run: |
-          pnpm config set fund false
-          pnpm install --frozen-lockfile
+        run: npm install --legacy-peer-deps
 
-      - name: Build Windows ${{ matrix.arch }}
-        shell: bash
-        run: |
-          if [ "${{ matrix.arch }}" = "x64" ]; then
-            pnpm run build:win --x64
-          else
-            pnpm run build:win --${{ matrix.arch }}
-          fi
+      - name: Build web assets
+        run: npx vite build
+
+      - name: Build Windows
+        run: npx electron-builder --win --publish never
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: p-stream-windows-${{ matrix.arch }}
-          path: dist/*.exe
+          name: nexus-windows-${{ matrix.arch }}
+          path: |
+            dist/*.exe
+            dist/*.zip
           retention-days: 30
 
   build-macos:
@@ -108,45 +58,69 @@ jobs:
         arch: [x64, arm64]
     env:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      CSC_IDENTITY_AUTO_DISCOVERY: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
 
       - name: Install dependencies
-        run: |
-          pnpm config set fund false
-          pnpm install --frozen-lockfile
+        run: npm install --legacy-peer-deps
+
+      - name: Build web assets
+        run: npx vite build
 
       - name: Build macOS ${{ matrix.arch }}
-        run: |
-          if [ "${{ matrix.arch }}" = "x64" ]; then
-            pnpm run build:mac --x64
-          else
-            pnpm run build:mac --${{ matrix.arch }}
-          fi
+        run: npx electron-builder --mac --${{ matrix.arch }} --publish never
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: p-stream-macos-${{ matrix.arch }}
+          name: nexus-macos-${{ matrix.arch }}
           path: |
             dist/*.dmg
             dist/*.zip
           retention-days: 30
 
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x64]
+    env:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      CSC_IDENTITY_AUTO_DISCOVERY: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build web assets
+        run: npx vite build
+
+      - name: Build Linux ${{ matrix.arch }}
+        run: npx electron-builder --linux --${{ matrix.arch }} --publish never
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-linux-${{ matrix.arch }}
+          path: dist/*.AppImage
+          retention-days: 30
+
   release:
-    needs: [build-linux, build-windows, build-macos]
+    needs: [build-windows, build-macos, build-linux]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' || github.event.inputs.draft_release == 'true'
     env:
@@ -167,7 +141,6 @@ jobs:
           if [ -z "$VERSION_TAG" ]; then
             VERSION_TAG="draft-${{ github.run_number }}"
           fi
-
           gh release create "$VERSION_TAG" \
             --title "Draft Release ${{ github.run_number }}" \
             --notes "Automated draft release" \
@@ -176,25 +149,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Install dependencies
+      - name: Upload Release Assets
         run: |
-          pnpm config set fund false
-          pnpm install --frozen-lockfile
-
-      - name: Upload Release Assets and Generate Update Metadata
-        run: |
-          # Determine release tag
           if [ "${{ github.event.inputs.draft_release }}" = "true" ]; then
             VERSION_TAG="${{ github.event.inputs.version }}"
             if [ -z "$VERSION_TAG" ]; then
@@ -208,127 +164,12 @@ jobs:
 
           echo "Uploading to release: $RELEASE_TAG"
 
-          # Extract version from package.json
-          VERSION=$(node -p "require('./package.json').version")
-          echo "App version: $VERSION"
-
-          # Find and upload all built artifacts, and collect info for update files
-          mkdir -p update-metadata
-
-          # First pass: Upload all files and collect metadata (prefer x64)
-          LINUX_FILE=""
-          WINDOWS_FILE=""
-          MACOS_FILE=""
-          LINUX_SHA512=""
-          WINDOWS_SHA512=""
-          MACOS_SHA512=""
-          LINUX_SIZE=""
-          WINDOWS_SIZE=""
-          MACOS_SIZE=""
-
           for file in ./artifacts/*/*; do
             if [ -f "$file" ]; then
               filename=$(basename "$file")
               echo "Uploading $filename..."
               gh release upload "$RELEASE_TAG" "$file" --clobber
-              
-              # Get file size and SHA512 for update metadata
-              SIZE=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo "0")
-              
-              # Generate SHA512 hash (required for electron-updater)
-              if command -v shasum > /dev/null; then
-                SHA512=$(shasum -a 512 "$file" | cut -d' ' -f1)
-              elif command -v sha512sum > /dev/null; then
-                SHA512=$(sha512sum "$file" | cut -d' ' -f1)
-              else
-                echo "Error: Cannot generate SHA512 hash. Install shasum or sha512sum."
-                exit 1
-              fi
-              
-              # Determine platform and collect file info (prefer x64)
-              if [[ "$filename" == *.AppImage ]]; then
-                if [[ "$filename" == *x64* ]] || [ -z "$LINUX_FILE" ]; then
-                  LINUX_FILE="$filename"
-                  LINUX_SHA512="$SHA512"
-                  LINUX_SIZE="$SIZE"
-                fi
-              elif [[ "$filename" == *.exe ]]; then
-                if [[ "$filename" == *x64* ]] || [ -z "$WINDOWS_FILE" ]; then
-                  WINDOWS_FILE="$filename"
-                  WINDOWS_SHA512="$SHA512"
-                  WINDOWS_SIZE="$SIZE"
-                fi
-              elif [[ "$filename" == *.dmg ]]; then
-                if [ -z "$MACOS_FILE" ]; then
-                  MACOS_FILE="$filename"
-                  MACOS_SHA512="$SHA512"
-                  MACOS_SIZE="$SIZE"
-                fi
-              elif [[ "$filename" == *.zip ]]; then
-                # Only use .zip if .dmg wasn't found
-                if [ -z "$MACOS_FILE" ]; then
-                  MACOS_FILE="$filename"
-                  MACOS_SHA512="$SHA512"
-                  MACOS_SIZE="$SIZE"
-                fi
-              fi
             fi
           done
-
-          # Generate update metadata files
-          RELEASE_DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
-
-          if [ -n "$LINUX_FILE" ]; then
-            {
-              echo "version: $VERSION"
-              echo "files:"
-              echo "  - url: $LINUX_FILE"
-              echo "    sha512: $LINUX_SHA512"
-              echo "    size: $LINUX_SIZE"
-              echo "path: $LINUX_FILE"
-              echo "sha512: $LINUX_SHA512"
-              echo "releaseDate: $RELEASE_DATE"
-            } > "update-metadata/latest-linux.yml"
-          fi
-
-          if [ -n "$WINDOWS_FILE" ]; then
-            {
-              echo "version: $VERSION"
-              echo "files:"
-              echo "  - url: $WINDOWS_FILE"
-              echo "    sha512: $WINDOWS_SHA512"
-              echo "    size: $WINDOWS_SIZE"
-              echo "path: $WINDOWS_FILE"
-              echo "sha512: $WINDOWS_SHA512"
-              echo "releaseDate: $RELEASE_DATE"
-            } > "update-metadata/latest.yml"
-          fi
-
-          if [ -n "$MACOS_FILE" ]; then
-            {
-              echo "version: $VERSION"
-              echo "files:"
-              echo "  - url: $MACOS_FILE"
-              echo "    sha512: $MACOS_SHA512"
-              echo "    size: $MACOS_SIZE"
-              echo "path: $MACOS_FILE"
-              echo "sha512: $MACOS_SHA512"
-              echo "releaseDate: $RELEASE_DATE"
-            } > "update-metadata/latest-mac.yml"
-          fi
-
-          # Upload update metadata files
-          if ls update-metadata/*.yml 1> /dev/null 2>&1; then
-            echo "Uploading update metadata files..."
-            for yml in update-metadata/*.yml; do
-              filename=$(basename "$yml")
-              echo "Uploading $filename..."
-              gh release upload "$RELEASE_TAG" "$yml" --clobber
-            done
-            echo "Update metadata files uploaded successfully"
-          else
-            echo "Warning: No update metadata files were generated"
-            echo "This may cause update checks to fail"
-          fi
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}

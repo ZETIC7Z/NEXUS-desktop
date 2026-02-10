@@ -7,8 +7,8 @@ const https = require('https');
 const { spawn } = require('child_process');
 
 // GitHub repository configuration
-const GITHUB_OWNER = 'p-stream';
-const GITHUB_REPO = 'p-stream-desktop';
+const GITHUB_OWNER = 'ZETICUZ';
+const GITHUB_REPO = 'NEXUS-desktop';
 
 // Updater window reference
 let updaterWindow = null;
@@ -39,7 +39,7 @@ function fetchJSON(url) {
   return new Promise((resolve, reject) => {
     const options = {
       headers: {
-        'User-Agent': 'P-Stream-Desktop-Updater',
+        'User-Agent': 'NEXUS-Desktop-Updater',
         Accept: 'application/vnd.github.v3+json',
       },
     };
@@ -95,7 +95,7 @@ function downloadFile(url, destPath, onProgress) {
       const reqOptions = {
         hostname: urlObj.hostname,
         path: urlObj.pathname + urlObj.search,
-        headers: { 'User-Agent': 'P-Stream-Desktop-Updater' },
+        headers: { 'User-Agent': 'NEXUS-Desktop-Updater' },
       };
 
       https
